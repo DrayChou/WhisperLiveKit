@@ -1,7 +1,11 @@
-FROM python:3.13-slim
+# 使用道客云的Python镜像（中国镜像）
+FROM docker.m.daocloud.io/library/python:3.13-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+# 配置torch hub缓存目录
+ENV TORCH_HOME=/root/.cache/torch
+ENV TORCH_HUB_DIR=/root/.cache/torch/hub
 
 WORKDIR /app
 
@@ -9,27 +13,62 @@ ARG EXTRAS
 ARG HF_PRECACHE_DIR
 ARG HF_TKN_FILE
 
-RUN apt-get update && \
+# Debian源配置（HTTP→HTTPS智能切换策略）
+RUN echo "🇨🇳 配置Debian镜像源..." && \
+    # 备份原始源
+    cp /etc/apt/sources.list /etc/apt/sources.list.backup 2>/dev/null || true && \
+    # 使用阿里云镜像源
+    echo 'deb http://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware' > /etc/apt/sources.list && \
+    echo 'deb http://mirrors.aliyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware' >> /etc/apt/sources.list && \
+    echo 'deb http://mirrors.aliyun.com/debian-security bookworm-security main contrib non-free non-free-firmware' >> /etc/apt/sources.list && \
+    # 更新包列表并安装ca-certificates
+    apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    # 升级为HTTPS源
+    sed -i 's|http://|https://|g' /etc/apt/sources.list && \
+    apt-get update && \
+    # 安装依赖包
     apt-get install -y --no-install-recommends \
         ffmpeg \
         git \
         build-essential \
         python3-dev && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    echo "✅ Debian源配置完成"
 
-# Install CPU-only PyTorch
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# 配置pip使用中国镜像源
+RUN echo "🇨🇳 配置pip镜像源..." && \
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip config set install.trusted-host pypi.tuna.tsinghua.edu.cn && \
+    pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+    echo "✅ pip配置完成"
+
+# Install CPU-only PyTorch (使用中国镜像源，带重试机制)
+RUN echo "🇨🇳 安装CPU版PyTorch..." && \
+    (pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple || \
+     pip install torch torchvision torchaudio -i https://pypi.mirrors.ustc.edu.cn/simple || \
+     pip install torch torchvision torchaudio -i https://repo.huaweicloud.com/repository/pypi/simple || \
+     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu) && \
+    echo "✅ CPU版PyTorch安装完成"
 
 COPY . .
 
 # Install WhisperLiveKit directly, allowing for optional dependencies
-RUN if [ -n "$EXTRAS" ]; then \
+RUN echo "🇨🇳 安装WhisperLiveKit..." && \
+    if [ -n "$EXTRAS" ]; then \
       echo "Installing with extras: [$EXTRAS]"; \
-      pip install --no-cache-dir whisperlivekit[$EXTRAS]; \
+      (pip install --no-cache-dir whisperlivekit[$EXTRAS] -i https://pypi.tuna.tsinghua.edu.cn/simple || \
+       pip install --no-cache-dir whisperlivekit[$EXTRAS] -i https://pypi.mirrors.ustc.edu.cn/simple || \
+       pip install --no-cache-dir whisperlivekit[$EXTRAS] -i https://repo.huaweicloud.com/repository/pypi/simple || \
+       pip install --no-cache-dir whisperlivekit[$EXTRAS]); \
     else \
       echo "Installing base package only"; \
-      pip install --no-cache-dir whisperlivekit; \
-    fi
+      (pip install --no-cache-dir whisperlivekit -i https://pypi.tuna.tsinghua.edu.cn/simple || \
+       pip install --no-cache-dir whisperlivekit -i https://pypi.mirrors.ustc.edu.cn/simple || \
+       pip install --no-cache-dir whisperlivekit -i https://repo.huaweicloud.com/repository/pypi/simple || \
+       pip install --no-cache-dir whisperlivekit); \
+    fi && \
+    echo "✅ WhisperLiveKit安装完成"
 
 # Enable in-container caching for Hugging Face models
 VOLUME ["/root/.cache/huggingface/hub"]

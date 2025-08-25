@@ -13,11 +13,11 @@ MODEL=tiny
 # 语言配置
 # 可选值: auto, zh, en, ja, ko, etc.
 # auto 为自动检测语言
-LANGUAGE=auto
+LANGUAGE=zh
 
 # 高级配置（可选，删除注释符号#来启用）
 # DIARIZATION=true          # 启用说话人分离
-# GPU=true                  # 启用GPU加速（需要CUDA）
+GPU=true                  # 启用GPU加速（需要CUDA）
 # MIN_CHUNK_SIZE=1          # 最小音频块大小（秒）
 # CONFIDENCE_VALIDATION=true # 启用置信度验证
 # LOG_LEVEL=INFO            # 日志级别 (DEBUG, INFO, WARNING, ERROR)

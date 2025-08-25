@@ -138,3 +138,7 @@ test_*.py
 launch.json
 .DS_Store
 test/*
+
+.lh/
+.claude/
+models/trusted_list

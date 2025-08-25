@@ -1,11 +1,11 @@
-# WhisperLiveKit PowerShell 启动脚本
+﻿# WhisperLiveKit PowerShell 启动脚本
 # 用法: .\Start-WhisperLiveKit.ps1 [-Model tiny] [-Port 8815] [-Language auto]
 
 param(
     [string]$Model = "tiny",
     [int]$Port = 8815,
-    [string]$Language = "auto",
-    [string]$Host = "0.0.0.0",
+    [string]$Language = "zh",
+    [string]$BindHost = "0.0.0.0",
     [switch]$GPU = $false,
     [switch]$Diarization = $false,
     [switch]$Help = $false
@@ -27,8 +27,8 @@ WhisperLiveKit PowerShell 启动脚本
 参数:
     -Model <string>     Whisper模型大小 (tiny, base, small, medium, large)
     -Port <int>         服务端口号 (默认: 8815)
-    -Language <string>  语言代码 (auto, zh, en 等，默认: auto)
-    -Host <string>      绑定主机地址 (默认: 0.0.0.0)
+    -Language <string>  语言代码 (auto, zh, en 等，默认: zh)
+    -BindHost <string>  绑定主机地址 (默认: 0.0.0.0)
     -GPU                启用GPU加速 (需要CUDA)
     -Diarization        启用说话人分离
     -Help               显示此帮助信息
@@ -97,20 +97,27 @@ try {
     Write-Host "[成功] WhisperLiveKit安装完成！" -ForegroundColor Green
 }
 
-# GPU检查
-if ($GPU) {
+# GPU自动检测和启用
+if (-not $GPU) {
     try {
-        python -c "import torch; print('CUDA 可用:', torch.cuda.is_available())" 2>$null
-        Write-Host "[信息] GPU模式已启用" -ForegroundColor Green
+        $cudaCheck = python -c "import torch; print(torch.cuda.is_available())" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $cudaCheck -eq "True") {
+            $GPU = $true
+            Write-Host "[信息] 检测到CUDA支持，自动启用GPU模式" -ForegroundColor Green
+        } else {
+            Write-Host "[信息] 未检测到CUDA支持，使用CPU模式" -ForegroundColor Yellow
+        }
     } catch {
-        Write-Host "[警告] GPU检查失败，将使用CPU模式" -ForegroundColor Yellow
+        Write-Host "[信息] GPU检查失败，使用CPU模式" -ForegroundColor Yellow
         $GPU = $false
     }
+} else {
+    Write-Host "[信息] 手动启用GPU模式" -ForegroundColor Green
 }
 
 # 构建启动参数
 $args = @(
-    "--host", $Host,
+    "--host", $BindHost,
     "--port", $Port,
     "--model", $Model,
     "--language", $Language
@@ -125,12 +132,12 @@ if ($Diarization) {
 Write-Host @"
 
 [配置] 启动参数:
-  - 主机地址: $Host
+  - 主机地址: $BindHost
   - 端口: $Port
   - 模型: $Model
   - 语言: $Language
-  - GPU模式: $($GPU ? '启用' : '禁用')
-  - 说话人分离: $($Diarization ? '启用' : '禁用')
+  - GPU模式: $(if ($GPU) { '启用' } else { '禁用' })
+  - 说话人分离: $(if ($Diarization) { '启用' } else { '禁用' })
 
 "@ -ForegroundColor Cyan
 

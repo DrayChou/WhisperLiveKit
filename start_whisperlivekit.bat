@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 title WhisperLiveKit 语音转录服务
 
@@ -50,7 +50,7 @@ if errorlevel 1 (
 set HOST=0.0.0.0
 set PORT=8815
 set MODEL=tiny
-set LANGUAGE=auto
+set LANGUAGE=zh
 
 :: 读取用户配置（如果存在）
 if exist "config.txt" (

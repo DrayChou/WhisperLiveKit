@@ -1,0 +1,29 @@
+# WhisperLiveKit 配置文件
+# 修改下面的参数来自定义启动设置
+
+# 服务器配置
+HOST=0.0.0.0
+PORT=8815
+
+# 模型配置
+# 可选值: tiny, base, small, medium, large, large-v3
+# tiny 最快但准确度最低，large 最准确但最慢
+MODEL=tiny
+
+# 语言配置
+# 可选值: auto, zh, en, ja, ko, etc.
+# auto 为自动检测语言
+LANGUAGE=auto
+
+# 高级配置（可选，删除注释符号#来启用）
+# DIARIZATION=true          # 启用说话人分离
+# GPU=true                  # 启用GPU加速（需要CUDA）
+# MIN_CHUNK_SIZE=1          # 最小音频块大小（秒）
+# CONFIDENCE_VALIDATION=true # 启用置信度验证
+# LOG_LEVEL=INFO            # 日志级别 (DEBUG, INFO, WARNING, ERROR)
+
+# 注意事项：
+# 1. 如果使用GPU模式，确保已安装CUDA和对应的PyTorch版本
+# 2. 模型越大，转录质量越好，但消耗的资源也越多
+# 3. 说话人分离功能需要额外的计算资源
+# 4. 端口8815需要确保未被其他程序占用
